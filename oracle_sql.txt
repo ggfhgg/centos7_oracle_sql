@@ -1,0 +1,135 @@
+连接：
+  第一种方法：
+       lnsrctl start
+       sqlplus /nolog
+       conn /as sysdba #以最高权限登陆
+       startup
+  第二种方法：
+       lnsrctl start
+       sqlplus 用户名/密码 
+       #直接进入
+****当使用第二种方法时，在用户名和密码都输入正确的情况下无法登陆，且弹出lack create session privilege，尝试添加权限解决****
+****grant create session,resource to user2 --用户名****
+****sys用户是超级用户，具有最高权限，具有sysdba角色，有create database的权限****
+****system用户是管理操作员，权限也很大。具有sysoper角色，没有create database的权限****
+-----------------------------------------------------------------------------------------------------------------------------------------
+创建临时表空间：
+       create temporary tablespace test                     --表空间名称
+       tempfile 'oracle/oracledata/tenp001.dbf'        --文件路径
+       size 1024m                                                       --初始大小
+       autoextend on next 32m                                  -- 每次自动扩展大小
+       maxsize 2048m;                                                --最大多少（可设置为UNLIMITED,则最大为32g）
+创建永久性表空间：
+       create tablespace TEST
+       datafile '/oracle/*******'
+       size 32m
+       autoexten on next 32m
+       maxsize 2048m;
+-----------------------------------------------------------------------------------------------------------------------------------------
+为表空间添加数据文件：
+       alter tablespace TEST add datafile '/**/***/**'
+       size 50m
+       autoextend on next 5m
+       maxsize 100m;
+**当表空间对应的数据文件已经增长到上限值（自己设置的上限值，或者32g），此时则需要为该表空间新增一个数据文件**
+-----------------------------------------------------------------------------------------------------------------------------------------
+对已存在的数据文件属性进行修改：
+       alter database datafile '/**/**/**/'
+       resize 100m;                                     --重新调整大小
+-----------------------------------------------------------------------------------------------------------------------------------------
+用户创建：
+       create user username            -- 用户名
+       identified by password          -- 密码
+       default tablespace TEST         -- 指定永久性表空间
+       temporary tablespace test     -- 指定临时的表空间
+       profile default;                       -- 默认的profile
+****可以不指定表空间，系统会将该用户之后创建的数据放在默认表空间里，可能有默认表空间溢满的危险****
+****当决定要指定的表空间时，临时表空间和永久表空间要同时指定****
+-----------------------------------------------------------------------------------------------------------------------------------------
+用户授权：
+       --把角色授予用户，该用户也将拥有该角色的权限
+
+       grant connect to username;               --连接数据库
+       
+grant resource to username;              --创建数据库实体（表，过程等）
+       
+grant dba to username;                     --创建数据库结构
+ 
+
+
+       --针对表空间使用
+
+       grant unlimited tablespace to username; --用户可以再其他表空间随意建表，且无限额
+ 
+
+       
+--系统权限（此处列举几个）
+
+       grant create cluster to username;
+
+       grant create procedure to username;
+
+       grant create synonym to username;
+
+       grant create trigger to username;
+
+       grant create view to username;
+
+       grant create JOB to username;
+
+       grant drop any table to username;
+ 
+
+
+       --对象权限（此处列举几个）
+
+       grant delete any table to username;
+
+       grant update any table to username;
+
+       grant insert any table to username;
+
+       grant select any table to username;
+-----------------------------------------------------------------------------------------------------------------------------------------
+查询已建立的表：
+       select * from user_tables;     --查自己的表；
+       select * from all_tables;        --查自己有权限的表；
+       select * from dba_tables;      --查系统里所有的表（需要dba权限）
+-----------------------------------------------------------------------------------------------------------------------------------------
+查询列名：
+       select column_name,data_type,data_length,data_precision,data_scale from user_tab_columns [where table_name='表名'];
+tips: column_name:列名;
+        data_type:列的数据类型；
+        data_length:列的长度;
+        **只能使用单引号**
+        **表名要大写**
+-----------------------------------------------------------------------------------------------------------------------------------------
+查询表名：
+       select table_name,tablespace_name,temporary from user_tables[where table_name='表名'];
+tips:table_name:表名;
+       tablespace_name:存储表名的表空间；
+       temporary:是否是临时表;
+       **只能使用单引号**
+       **表名要大写**
+-----------------------------------------------------------------------------------------------------------------------------------------
+查询表空间对应数据文件的路径:
+       select * from dba_data_files;
+-----------------------------------------------------------------------------------------------------------------------------------------
+修改列属性
+       alter table 表名 modify 列名 varchar(50);     --varchar(50)是修改后的属性
+-----------------------------------------------------------------------------------------------------------------------------------------
+新增数据
+       insert into 表名 (column1,column2,column3,······)values(data1,data2,data3,·······);
+****插入多条数据****
+       insert into 表名 (column1,column2,column3,······) select 另一个表名;
+****想插入多条数据必须使用select语句，从另一个表里检索数据****
+****insert into指定的列名可以与select子句指定的列名不同，但是数据类型必须兼容,且满足约束****
+-----------------------------------------------------------------------------------------------------------------------------------------
+更新语句
+       update 表名 set 列名1 = 新数据 [where column1=data1];
+-----------------------------------------------------------------------------------------------------------------------------------------
+联合查询语句
+       select 列名1，列名2 from 表名1 [where column1=data1] union [all] select 列名1，列名2 from 表名2
+**eg:select id from student where age > 19 union select id from test;**
+**union查询的列名数量必须与前面对应，数据类型也要兼容**
+**union all与union的区别在于union会合并重复的行，而union all不会**
